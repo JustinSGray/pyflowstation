@@ -1,13 +1,13 @@
 
 import unittest
 
-from pyflowstation.pyflowstation import FlowStation
+from pyflowstation.pyflowstation import CanteraFlowStation
 
 class FlowStationTestCase(unittest.TestCase):
 
     def setUp(self): 
         """Initialization function called before every test function""" 
-        self.fs = FlowStation()
+        self.fs = CanteraFlowStation()
         self.fs.W = 100
         self.fs.setDryAir()
         self.fs.setTotalTP(518, 15)
@@ -20,7 +20,7 @@ class FlowStationTestCase(unittest.TestCase):
 
         #print "TESTING"
 
-        self.new_fs = FlowStation()
+        self.new_fs = CanteraFlowStation()
 
         self.new_fs.copy(self.fs)
 
@@ -76,7 +76,7 @@ class FlowStationTestCase(unittest.TestCase):
 
 class TestBurn(unittest.TestCase): 
     def setUp(self):
-        self.fs = FlowStation()
+        self.fs = CanteraFlowStation()
         self.fs.setDryAir()
         self.fs.setTotalTP(1100, 400)
         self.fs.W = 100.
@@ -101,7 +101,7 @@ class TestBurn(unittest.TestCase):
 
 class TestStatics(unittest.TestCase): 
     def setUp(self):
-        self.fs = FlowStation()
+        self.fs = CanteraFlowStation()
         self.fs.W = 100.
         self.fs.setDryAir()
         self.fs.setTotalTP(1100, 400)      

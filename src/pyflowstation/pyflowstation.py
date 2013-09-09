@@ -1,4 +1,4 @@
-__all__ = ['FlowStation']
+__all__ = ['CanteraFlowStation']
 
 from os.path import dirname, join
 
@@ -27,7 +27,7 @@ def secant(func, oldx, x, TOL=1e-5, MAXDX=10000000 ):
 
 
 
-class FlowStation(VariableTree):
+class CanteraFlowStation(VariableTree):
 
     reactants=["Air", "H2O"]
 
@@ -60,7 +60,7 @@ class FlowStation(VariableTree):
             
     #intialize station        
     def __init__(self): 
-        super(FlowStation, self).__init__()
+        super(CanteraFlowStation, self).__init__()
 
         #properties file path
         _dir = dirname(pyflowstation.__file__)
@@ -139,7 +139,6 @@ class FlowStation(VariableTree):
         self.trigger=1 
         self.ht=hin
         self.Pt=Pin
-        print "Pin "+ str(self.Pt)
         self._flow.set(H=hin/.0004302099943161011, P=Pin*6894.75729)
         self._flow.equilibrate('HP')
         self.Tt=self._flow.temperature()*9./5.
@@ -195,7 +194,6 @@ class FlowStation(VariableTree):
         for i in range(0, len(self.reactants)):
                 self._species[i]=FS2._species[i]
                 temp=temp+self.reactants[i]+":"+str(self._species[i])+" "
-                print temp
         self._flow.setMassFractions(temp)
         self._flow.set(T=self.Tt*5./9., P=self.Pt*6894.75729)
         self._flow.equilibrate('TP')
@@ -204,16 +202,13 @@ class FlowStation(VariableTree):
     def burn(self, fuel, Wfuel, hfuel):
         flow_1=self.W
         ht=self.ht
-        print ht 
         self.W=self.W + Wfuel 
         for i in range(0, len(self.reactants)):
             if fuel == self.reactants[i]:
                 self._species[i]=(flow_1*self._species[i]+Wfuel)/ self.W
             else:
                 self._species[i]=(flow_1*self._species[i])/ self.W
-        print self._species        
         ht=(flow_1 * ht + Wfuel * hfuel)/ self.W
-        print ht
         self.ht=ht
         air1=flow_1 * (1. / (1. + self.FAR + self.WAR))
         self.FAR=(air1 * self.FAR + Wfuel)/(air1)
@@ -294,11 +289,3 @@ class FlowStation(VariableTree):
         self.setStaticMach()
         self.area= self.W / (self.rhos * self.Vflow)*144. 
         self.trigger=0
-
-
-    def validate(self, object, name, value):
-        pass
-        # insert validation code here
-        
-        # in the event of an error, call
-        # self.error(object, name, value)
