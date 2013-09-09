@@ -1,0 +1,3 @@
+graft src/pyflowstation/sphinx_build/html
+recursive-include src/pyflowstation/test *.py
+

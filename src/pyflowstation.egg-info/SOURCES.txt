@@ -1,0 +1,13 @@
+MANIFEST.in
+README.txt
+setup.cfg
+setup.py
+src/pyflowstation/__init__.py
+src/pyflowstation/pyflowstation.py
+src/pyflowstation.egg-info/PKG-INFO
+src/pyflowstation.egg-info/SOURCES.txt
+src/pyflowstation.egg-info/dependency_links.txt
+src/pyflowstation.egg-info/not-zip-safe
+src/pyflowstation.egg-info/requires.txt
+src/pyflowstation.egg-info/top_level.txt
+src/pyflowstation/test/test_pyflowstation.py
