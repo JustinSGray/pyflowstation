@@ -22,7 +22,7 @@ class FlowStationTestCase(unittest.TestCase):
 
         self.new_fs = CanteraFlowStation()
 
-        self.new_fs.copy(self.fs)
+        self.new_fs.copy_from(self.fs)
 
         self.assertAlmostEqual(self.new_fs.Tt, 518)
         self.assertAlmostEqual(self.new_fs.Pt, 15)

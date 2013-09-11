@@ -2,7 +2,7 @@ __all__ = ['CanteraFlowStation']
 
 from os.path import dirname, join
 
-from openmdao.main.vartree import VariableTree
+from openmdao.main.api import VariableTree
 from openmdao.lib.datatypes.api import Float, VarTree
 
 from Cantera import *
@@ -49,7 +49,21 @@ class CanteraFlowStation(VariableTree):
     Mach=Float(0.0, desc='Mach number', unit='')
     area =Float(0.0, desc='flow area', unit='in2') 
 
-    trigger=int(0)
+    #intialize station        
+    def __init__(self,*args,**kwargs): 
+        super(CanteraFlowStation, self).__init__(*args,**kwargs)
+
+        #properties file path
+        _dir = dirname(pyflowstation.__file__)
+        _prop_file = join(_dir,'gri1000.cti')
+
+        self._trigger = 0
+        
+        self._species=[1.0, 0, 0, 0, 0, 0, 0, 0]
+        self._mach_or_area=0    
+        self._flow=importPhase(_prop_file)
+        self._flowS=importPhase(_prop_file)
+        self.setDryAir()
     
     #add a reactant that can be mixed in
     def add_reactant(self, reactant):
@@ -57,44 +71,31 @@ class CanteraFlowStation(VariableTree):
                     if self.reactants[i] == reactant:
                             return
             self.reactants.append(reactant)
-            
-    #intialize station        
-    def __init__(self): 
-        super(CanteraFlowStation, self).__init__()
-
-        #properties file path
-        _dir = dirname(pyflowstation.__file__)
-        _prop_file = join(_dir,'gri1000.cti')
         
-        self._species=[1.0, 0, 0, 0, 0, 0, 0, 0]
-        self._mach_or_area=0    
-        self._flow=importPhase(_prop_file)
-        self._flowS=importPhase(_prop_file)
-        self.setDryAir()
-            
+        
     #trigger action on Mach
     def _Mach_changed(self):
-        if self.trigger == 0:
-                self.trigger=1
+        if self._trigger == 0:
+                self._trigger=1
                 self._mach_or_area=1
                 self.setStatic()
-                self.trigger=0
+                self._trigger=0
                     
     #trigger action on area        
     def _area_changed(self):
-        if self.trigger == 0:
-                self.trigger =1
+        if self._trigger == 0:
+                self._trigger =1
                 self._mach_or_area=2
                 self.setStatic()
-                self.trigger=0
+                self._trigger=0
            
     #trigger action on static pressure       
     def _Ps_changed(self):
-        if self.trigger == 0:
-                self.trigger=1
+        if self._trigger == 0:
+                self._trigger=1
                 self._mach_or_area=3
                 self.setStatic()
-                self.trigger=0 
+                self._trigger=0 
     
     #set the composition to dry air
     def setDryAir(self):
@@ -104,11 +105,11 @@ class CanteraFlowStation(VariableTree):
         self.WAR=0
         self.FAR=0
         self.setStatic()
-        self.trigger=0
+        self._trigger=0
     
     #set the compositon to air with water
     def setWAR(self, WAR):
-        self.trigger=1
+        self._trigger=1
         self.WAR=WAR
         self.FAR=0
         self._flow.setMassFractions("Air:"+str((1-WAR)/(1+WAR))+" H2O:"+str((WAR)/(1+WAR)))
@@ -116,11 +117,11 @@ class CanteraFlowStation(VariableTree):
         self._species[0]=(1-WAR)/(1+WAR)
         self._species[1]=(WAR)/(1+WAR)
         self.setStatic()
-        self.trigger=0
+        self._trigger=0
 
         #set total conditions based on T an P
     def setTotalTP(self, Tin, Pin):
-        self.trigger=1
+        self._trigger=1
         self.Tt=Tin
         self.Pt=Pin                
         self._flow.set(T=Tin*5./9., P=Pin*6894.75729)
@@ -132,11 +133,11 @@ class CanteraFlowStation(VariableTree):
         self.gamt=self._flow.cp_mass()/self._flow.cv_mass()
         self._flowS=self._flow 
         self.setStatic()
-        self.trigger=0
+        self._trigger=0
 
     #set total conditions based on h and P
     def setTotal_hP(self, hin, Pin):
-        self.trigger=1 
+        self._trigger=1 
         self.ht=hin
         self.Pt=Pin
         self._flow.set(H=hin/.0004302099943161011, P=Pin*6894.75729)
@@ -146,11 +147,11 @@ class CanteraFlowStation(VariableTree):
         self.rhot=self._flow.density()*.0624
         self.gamt=self._flow.cp_mass()/self._flow.cv_mass()
         self.setStatic()
-        self.trigger=0
+        self._trigger=0
 
     #set total condition based on S and P
     def setTotalSP(self, sin, Pin):
-        self.trigger=1
+        self._trigger=1
         self.s=sin
         self.Pt=Pin             
         self._flow.set(S=sin/0.000238845896627, P=Pin*6894.75729)
@@ -160,7 +161,7 @@ class CanteraFlowStation(VariableTree):
         self.rhot=self._flow.density()*.0624
         self.gamt=self._flow.cp_mass()/self._flow.cv_mass()
         self.setStatic()
-        self.trigger=0
+        self._trigger=0
 
     #add another station to this one
     #mix enthalpies and keep pressure and this stations value
@@ -180,7 +181,8 @@ class CanteraFlowStation(VariableTree):
         self.rhot=self._flow.density()*.0624
         self.gamt=self._flow.cp_mass()/self._flow.cv_mass()          
                     
-    def copy(self, FS2):
+    def copy_from(self, FS2):
+        """duplicates total properties from another flow station""" 
         self.ht=FS2.ht
         self.Tt=FS2.Tt
         self.Pt=FS2.Pt
@@ -280,12 +282,17 @@ class CanteraFlowStation(VariableTree):
     #set the statics based on Ts, Ps, and MN
     #UPDGRAEDE TO USE LOOPS
     def setStaticTsPsMN(self, Ts, Ps, MN): 
-        self.trigger=1 
+        self._trigger=1 
         self.Tt=Ts*(1+(self.gamt - 1) /2.* MN**2)
         self.Pt=Ps*(1+(self.gamt - 1) /2.* MN**2)**(self.gamt /(self.gamt -1))
         self.setTotalTP(self.Tt, self.Pt)
-        self.trigger=1
+        self._trigger=1
         self.Mach=MN 
         self.setStaticMach()
         self.area= self.W / (self.rhos * self.Vflow)*144. 
-        self.trigger=0
+        self._trigger=0
+
+#variable class used in components
+class FlowStation(VarTree): 
+    def __init__(self,*args,**metadata): 
+        super(FlowStation,self).__init__(CanteraFlowStation(), *args, **metadata)
